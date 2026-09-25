@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard AI - Intelligent Meteorological Anomaly Sentinel</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Plotly.js CDN for OpenStreetMap Scatter & 3D Analytics -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            darkBg: '#090d16',
+            cardBg: '#111827',
+            cardBorder: '#1e293b',
+            cyanAccent: '#06b6d4',
+            emeraldSuccess: '#10b981',
+            amberWarning: '#f59e0b',
+            roseDanger: '#ef4444'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body { background-color: #090d16; font-family: 'Inter', sans-serif; color: #f8fafc; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .sidebar-btn.active { background: linear-gradient(90deg, rgba(6,182,212,0.15), transparent); border-left: 3px solid #06b6d4; color: #38bdf8; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+  </style>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="flex h-screen overflow-hidden antialiased selection:bg-cyan-600 selection:text-white">
+
+  <!-- ========================================================= -->
+  <!-- LEFT SIDEBAR                                              -->
+  <!-- ========================================================= -->
+  <aside class="w-64 bg-cardBg border-r border-cardBorder flex flex-col justify-between shrink-0">
+    <div>
+      <!-- Branding without Logo -->
+      <div class="p-5 border-b border-cardBorder">
+        <h1 class="text-base font-extrabold tracking-wider uppercase bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">SkyGuard AI</h1>
+        <div class="flex items-center space-x-2 mt-1">
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 font-mono border border-cyan-800/50">Meteorological Sentinel</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-3 space-y-1.5 text-xs sm:text-sm font-medium overflow-y-auto custom-scrollbar max-h-[calc(100vh-160px)]">
+        <button onclick="window.app.switchTab('map', this)" class="sidebar-btn active w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="map">
+          <i data-lucide="map-pin" class="w-4 h-4 text-cyan-400"></i>
+          <span>Geo Station Map</span>
+        </button>
+        <button onclick="window.app.switchTab('charts', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="charts">
+          <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+          <span>Time-Series Inspector</span>
+        </button>
+        <button onclick="window.app.switchTab('alerts', this)" class="sidebar-btn w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="alerts">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-roseDanger"></i>
+            <span>Alert Feed & Triage</span>
+          </div>
+          <span id="sidebar-alert-badge" class="px-2 py-0.5 text-xs bg-roseDanger/20 text-roseDanger rounded-full font-bold">0</span>
+        </button>
+        <button onclick="window.app.switchTab('simulator', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="simulator">
+          <i data-lucide="zap" class="w-4 h-4 text-amberWarning"></i>
+          <span>Fault Injection Studio</span>
+        </button>
+        <button onclick="window.app.switchTab('models', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="models">
+          <i data-lucide="brain-circuit" class="w-4 h-4 text-purple-400"></i>
+          <span>AI Model Health & XAI</span>
+        </button>
+        <button onclick="window.app.switchTab('health', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="health">
+          <i data-lucide="heart-pulse" class="w-4 h-4 text-emerald-400"></i>
+          <span>Sensor Health & RUL</span>
+        </button>
+        <button onclick="window.app.switchTab('imputer', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="imputer">
+          <i data-lucide="sparkles" class="w-4 h-4 text-cyan-400"></i>
+          <span>Self-Healing Imputer</span>
+        </button>
+        <button onclick="window.app.switchTab('batch', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="batch">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-amber-400"></i>
+          <span>CSV Batch QC</span>
+        </button>
+        <button onclick="window.app.switchTab('edge', this)" class="sidebar-btn w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/60 transition cursor-pointer" data-tab="edge">
+          <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+          <span>Edge AI ESP32</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Simulation Clock Footer -->
+    <div class="p-4 border-t border-cardBorder bg-slate-950/40">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>Sim Clock</span>
+        <span class="text-emeraldSuccess font-mono flex items-center"><span class="w-2 h-2 rounded-full bg-emeraldSuccess animate-pulse mr-1.5"></span>Live UTC</span>
+      </div>
+      <div id="sim-clock-display" class="text-xs font-mono text-cyan-300 font-bold bg-cardBg px-3 py-2 rounded border border-cardBorder text-center">
+        Live UTC
+      </div>
+    </div>
+  </aside>
+
+
+
+  <!-- ========================================================= -->
+  <!-- MAIN VIEW CONTAINER                                       -->
+  <!-- ========================================================= -->
+  <main class="flex-1 flex flex-col overflow-hidden bg-darkBg">
+    
+    <!-- TOP CONTROL TASKBAR -->
+    <header class="h-16 bg-cardBg/60 backdrop-blur border-b border-cardBorder px-6 flex items-center justify-between shrink-0">
+      <div class="flex items-center space-x-2 text-xs text-slate-400">
+        <span>Network:</span>
+        <span class="text-white font-semibold">IMD Pan-India Automatic Weather Stations (16 Regions)</span>
+      </div>
+      <div class="flex items-center space-x-3">
+        
+        <!-- Dark / Light Mode Selector in Task Bar -->
+        <div class="flex items-center bg-slate-800/90 border border-slate-700 rounded-lg p-0.5 space-x-1" id="theme-selector-bar">
+          <button id="theme-btn-dark" onclick="window.app.setTheme('dark')" class="theme-btn px-2.5 py-1 text-xs font-semibold rounded-md flex items-center space-x-1.5 transition cursor-pointer bg-slate-700 text-cyan-400 shadow">
+            <i data-lucide="moon" class="w-3.5 h-3.5"></i>
+            <span>Dark</span>
+          </button>
+          <button id="theme-btn-light" onclick="window.app.setTheme('light')" class="theme-btn px-2.5 py-1 text-xs font-semibold rounded-md flex items-center space-x-1.5 transition cursor-pointer text-slate-400 hover:text-slate-200">
+            <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+            <span>Light</span>
+          </button>
+        </div>
+
+        <button id="btn-step-sim" class="flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-medium bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 rounded-md transition shadow cursor-pointer">
+          <i data-lucide="step-forward" class="w-3.5 h-3.5"></i>
+          <span>Advance Step (+15m)</span>
+        </button>
+        <button id="btn-auto-sim" class="flex items-center space-x-1.5 px-4 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-md shadow-lg shadow-blue-500/25 transition cursor-pointer">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          <span>Start Live Stream</span>
+        </button>
+      </div>
+    </header>
+
+
+
+
+
+
+    <!-- KPI SUMMARY CARDS -->
+    <div class="p-6 pb-2 grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+      <div class="bg-cardBg border border-cardBorder p-4 rounded-xl flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold tracking-wider text-slate-400 uppercase">AWS Network</div>
+          <div class="text-2xl font-bold text-white mt-1"><span id="stat-total-stations">16</span> <span class="text-xs text-emeraldSuccess font-normal">Active Stations</span></div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-400">
+          <i data-lucide="satellite-dish" class="w-5 h-5"></i>
+        </div>
+      </div>
+      <div id="card-active-anomalies" onclick="window.app.filterAlertsByCard('ALL_ACTIVE')" class="bg-cardBg border border-cardBorder hover:border-amber-500/60 transition cursor-pointer p-4 rounded-xl flex items-center justify-between group shadow-sm hover:shadow-amber-500/10" title="Click to view all Active Anomalies in Alert Feed">
+        <div>
+          <div class="text-xs font-semibold tracking-wider text-slate-400 group-hover:text-amber-400 transition uppercase flex items-center space-x-1">
+            <span>Active Anomalies</span>
+            <i data-lucide="external-link" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-amberWarning mt-1"><span id="stat-active-anomalies">0</span> <span class="text-xs text-slate-400 font-normal">Unresolved</span></div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 group-hover:bg-amber-500/25 transition flex items-center justify-center text-amberWarning">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+      </div>
+      <div id="card-critical-faults" onclick="window.app.filterAlertsByCard('CRITICAL_ONLY')" class="bg-cardBg border border-cardBorder hover:border-rose-500/60 transition cursor-pointer p-4 rounded-xl flex items-center justify-between group shadow-sm hover:shadow-rose-500/10" title="Click to view Critical Faults in Priority Triage">
+        <div>
+          <div class="text-xs font-semibold tracking-wider text-slate-400 group-hover:text-rose-400 transition uppercase flex items-center space-x-1">
+            <span>Critical Faults</span>
+            <i data-lucide="external-link" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition text-rose-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-roseDanger mt-1"><span id="stat-critical-count">0</span> <span class="text-xs text-slate-400 font-normal">Priority Triage</span></div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 group-hover:bg-rose-500/25 transition flex items-center justify-center text-roseDanger">
+          <i data-lucide="flame" class="w-5 h-5"></i>
+        </div>
+      </div>
+      <div class="bg-cardBg border border-cardBorder p-4 rounded-xl flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold tracking-wider text-slate-400 uppercase">AI Precision Rate</div>
+          <div class="text-2xl font-bold text-emeraldSuccess mt-1"><span id="stat-accuracy-rate">96.5%</span> <span class="text-xs text-slate-400 font-normal">F1: 0.948</span></div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emeraldSuccess">
+          <i data-lucide="target" class="w-5 h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC TAB PANELS -->
+    <div class="flex-1 p-6 pt-2 overflow-y-auto custom-scrollbar">
+      
+      <!-- ======================================================= -->
+      <!-- TAB 1: GEO MAP                                          -->
+      <!-- ======================================================= -->
+      <div id="view-map" class="tab-content active h-full space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[480px]">
+          
+          <!-- Left 2 Cols: Leaflet & Plotly Map -->
+          <div class="lg:col-span-2 bg-cardBg border border-cardBorder rounded-xl overflow-hidden flex flex-col">
+            <div class="p-3 px-4 border-b border-cardBorder flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="flex items-center space-x-2">
+                <span class="font-semibold text-slate-200">🇮🇳 Pan-India AWS Topology & Regional Clusters</span>
+                <span class="text-[11px] text-slate-400">(16 Stations • IDW Spatial Consensus)</span>
+              </div>
+              
+              <div class="flex items-center space-x-2.5">
+                <!-- Leaflet Live Key Container -->
+                <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs items-center space-x-1" id="leaflet-live-container">
+                  <button id="btn-map-leaflet" class="px-2.5 py-1 rounded font-bold bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer flex items-center space-x-1.5 shadow" title="Leaflet Live Active (Pan-India AWS Network)">
+                    <span>🗺️ Leaflet Live</span>
+                  </button>
+                </div>
+
+                <div class="hidden sm:flex items-center space-x-3">
+                  <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emeraldSuccess mr-1.5"></span>Normal</span>
+                  <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-amberWarning mr-1.5"></span>Degraded</span>
+                  <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-roseDanger mr-1.5"></span>Critical</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leaflet Container -->
+            <div id="map-container" class="flex-1 w-full min-h-[460px] bg-slate-950"></div>
+          </div>
+          
+          <!-- Right Col: Selected Station Detail Card & Defense Architecture -->
+          <div class="space-y-4 flex flex-col justify-between">
+            <div id="selected-station-card">
+              <div class="bg-cardBg border border-cardBorder p-5 rounded-xl text-center text-slate-500 text-xs">
+                Select an AWS station from the map to inspect live sensor telemetry and health score.
+              </div>
+            </div>
+
+            <!-- Network Station Health Card -->
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-4 space-y-3 flex flex-col">
+              <div class="flex items-center justify-between pb-2 border-b border-cardBorder">
+                <div class="flex items-center space-x-2">
+                  <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+                  <h3 class="text-sm font-bold text-white tracking-wide">Network Station Health</h3>
+                </div>
+                <span id="network-station-count" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-800/60">
+                  16 Active
+                </span>
+              </div>
+
+              <!-- Table Headers -->
+              <div class="grid grid-cols-12 text-[11px] font-semibold text-slate-400 px-2 pb-1 border-b border-slate-800/80">
+                <div class="col-span-6">City Station</div>
+                <div class="col-span-3 text-center">Fault Rate</div>
+                <div class="col-span-3 text-right">Health Status</div>
+              </div>
+
+              <!-- Station Health List Items -->
+              <div id="network-station-health-list" class="space-y-2 overflow-y-auto max-h-[340px] custom-scrollbar pr-1">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ======================================================= -->
+      <!-- TAB 2: TIME SERIES INSPECTOR                            -->
+      <!-- ======================================================= -->
+      <div id="view-charts" class="tab-content">
+        <div class="bg-cardBg border border-cardBorder rounded-xl p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Target Station Node</label>
+              <select id="chart-station-select" class="bg-slate-900 border border-slate-700 text-sm text-slate-200 rounded-lg px-3 py-2 outline-none focus:border-cyan-500">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <!-- Sensor Channel Buttons -->
+            <div class="flex flex-wrap gap-2 text-xs">
+              <button class="channel-btn active px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium border border-blue-500 cursor-pointer" data-channel="temperature_c">Air Temp (°C)</button>
+              <button class="channel-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer" data-channel="humidity_pct">Relative Humidity (%)</button>
+              <button class="channel-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer" data-channel="pressure_hpa">Pressure (hPa)</button>
+              <button class="channel-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer" data-channel="wind_speed_ms">Wind Speed (m/s)</button>
+              <button class="channel-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer" data-channel="solar_radiation_wm2">Solar Radiation (W/m²)</button>
+            </div>
+          </div>
+
+          <div class="h-80 w-full">
+            <canvas id="telemetryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 3: ALERT FEED & TRIAGE                              -->
+      <!-- ======================================================= -->
+      <div id="view-alerts" class="tab-content space-y-4">
+        <!-- Filter Controls Bar -->
+        <div class="bg-cardBg border border-cardBorder p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex flex-wrap items-center gap-3">
+            <div>
+              <label class="text-slate-400 block mb-1">Filter Station</label>
+              <select id="filter-station" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200">
+                <option value="">All Stations</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">Severity</label>
+              <select id="filter-severity" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200">
+                <option value="">All Severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">Status</label>
+              <select id="filter-status" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200">
+                <option value="DETECTED" selected>Detected (Open Only)</option>
+                <option value="">All Statuses</option>
+                <option value="ACKNOWLEDGED">Acknowledged</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="FALSE_POSITIVE">False Positive</option>
+              </select>
+
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">Anomaly Type</label>
+              <select id="filter-type" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200">
+                <option value="">All Anomaly Types</option>
+                <option value="SPIKE">⚡ Instantaneous Spike (Surge)</option>
+                <option value="SENSOR_DRIFT">📉 Progressive Sensor Drift</option>
+                <option value="FROZEN_SENSOR">❄️ Flatline Freeze</option>
+                <option value="CROSS_SENSOR_INCONSISTENCY">🔄 Magnus Dew Point Violation (Td > T)</option>
+                <option value="WMO_RANGE_VIOLATION">🚫 WMO Range Physical Limit</option>
+                <option value="RATE_OF_CHANGE">📈 Dynamic Step Rate of Change</option>
+                <option value="MULTIVARIATE_OUTLIER">🧠 Isolation Forest Multi-Sensor</option>
+                <option value="SPATIAL_DISCREPANCY">🌐 Spatial Consensus Outlier</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="btn-reset-anomalies" onclick="window.app.resetActiveAnomalies()" class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-rose-600/90 hover:bg-rose-500 text-white rounded-lg font-semibold cursor-pointer shadow transition" title="Reset all active anomalies to zero and restore station health to 100%">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset Active Anomalies (Zero)</span>
+            </button>
+            <button onclick="window.app.loadAlertsFeed()" class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold cursor-pointer shadow transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Refresh Alerts</span>
+            </button>
+          </div>
+        </div>
+
+
+
+
+
+        <!-- Sub-View Navigation Tabs for Alert Feed -->
+        <div class="flex flex-wrap items-center justify-between border-b border-cardBorder pb-3 gap-2" id="alerts-sub-nav">
+          <div class="flex items-center space-x-2">
+            <button id="subtab-all-active" onclick="window.app.filterAlertsByCard('ALL_ACTIVE')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 cursor-pointer bg-amber-950/70 text-amber-300 border border-amber-500 shadow-sm" title="Show all active unresolved anomalies">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+              <span>Active Anomalies</span>
+              <span id="tab-active-count-badge" class="px-1.5 py-0.2 rounded-full bg-amber-950 text-amber-300 text-[10px] font-mono font-bold border border-amber-800">0</span>
+            </button>
+            <button id="subtab-critical-only" onclick="window.app.filterAlertsByCard('CRITICAL_ONLY')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-2 cursor-pointer bg-slate-900 text-slate-400 border border-slate-800 hover:text-rose-400 hover:border-rose-500/40" title="Filter to Priority Critical Faults only">
+              <i data-lucide="flame" class="w-3.5 h-3.5"></i>
+              <span>Critical Faults Only</span>
+              <span id="tab-crit-count-badge" class="px-1.5 py-0.2 rounded-full bg-rose-950 text-rose-300 text-[10px] font-mono font-bold border border-rose-800">0</span>
+            </button>
+            <button id="subtab-all-events" onclick="window.app.filterAlertsByCard('ALL_EVENTS')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-2 cursor-pointer bg-slate-900 text-slate-400 border border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40" title="Show all historical and active anomalies">
+              <i data-lucide="list-filter" class="w-3.5 h-3.5"></i>
+              <span>All Logged Events</span>
+            </button>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono hidden md:flex items-center space-x-1">
+            <span>Live DB Connection:</span>
+            <span class="text-emeraldSuccess font-semibold">PostgreSQL / SQLite</span>
+          </div>
+        </div>
+
+        <!-- Alert Feed Dynamic Cards List -->
+        <div id="alerts-feed-list" class="space-y-3">
+          <!-- Dynamically populated with clean key-value grid alert cards -->
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 4: SYNTHETIC METEOROLOGICAL FAULT INJECTION LAB     -->
+      <!-- ======================================================= -->
+      <div id="view-simulator" class="tab-content space-y-4">
+        
+        <!-- Lab Header Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 p-4 bg-cardBg border border-cardBorder rounded-xl">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="menu" class="w-5 h-5 text-slate-400"></i>
+            <h2 class="text-xs sm:text-sm font-bold text-white tracking-wider uppercase flex items-center space-x-2">
+              <span>SYNTHETIC METEOROLOGICAL FAULT INJECTION LAB</span>
+            </h2>
+          </div>
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 text-xs">
+              <label class="text-slate-400 hidden sm:inline">Target Station:</label>
+              <select id="sim-station-select" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-medium">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div id="sim-stream-badge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="sim-status-label">ONLINE</span>
+            </div>
+            <button onclick="window.app.toggleAutoSimulation()" id="lab-btn-live" class="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer">
+              <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+              <span id="lab-btn-live-text">Live Telemetry</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2-Column Main Layout: Left Controls (8 cols) & Right Recent Injections (4 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          
+          <!-- LEFT COLUMN: Fault Injection Studio Controls -->
+          <div class="lg:col-span-8 space-y-4">
+            
+            <!-- SECTION 1 & 2: 2x3 Grid of Interactive Fault Type Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="fault-cards-grid">
+              
+              <!-- Card 1: Transient Spike -->
+              <div onclick="window.app.selectFaultCard('SPIKE')" id="fault-card-SPIKE" class="fault-type-card active p-3.5 bg-slate-900/80 border border-cyan-500/80 rounded-xl cursor-pointer transition relative hover:border-cyan-400 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-cyan-400 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>⚡ Transient Spike</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-cyan-400 bg-cyan-500 flex items-center justify-center text-[10px] text-black font-bold">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Single-tick step divergence on selected sensor channel</p>
+              </div>
+
+              <!-- Card 2: Frozen Telemetry -->
+              <div onclick="window.app.selectFaultCard('FROZEN_SENSOR')" id="fault-card-FROZEN_SENSOR" class="fault-type-card p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl cursor-pointer transition relative hover:border-slate-600 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-slate-200 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>❄️ Frozen Telemetry</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-slate-700 bg-transparent flex items-center justify-center text-[10px] text-transparent">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Hardware ADC lockup with zero natural micro-variance</p>
+              </div>
+
+              <!-- Card 3: Sensor Drift -->
+              <div onclick="window.app.selectFaultCard('SENSOR_DRIFT')" id="fault-card-SENSOR_DRIFT" class="fault-type-card p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl cursor-pointer transition relative hover:border-slate-600 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-slate-200 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>📉 Sensor Drift</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-slate-700 bg-transparent flex items-center justify-center text-[10px] text-transparent">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Sustained linear calibration decay on selected channel</p>
+              </div>
+
+              <!-- Card 4: Psychrometric Violation -->
+              <div onclick="window.app.selectFaultCard('CROSS_SENSOR_INCONSISTENCY')" id="fault-card-CROSS_SENSOR_INCONSISTENCY" class="fault-type-card p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl cursor-pointer transition relative hover:border-slate-600 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-slate-200 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>🔄 Psychrometric Violation</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-slate-700 bg-transparent flex items-center justify-center text-[10px] text-transparent">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">High Heat (52°C) + 96% RH (Atmospheric physics violation)</p>
+              </div>
+
+              <!-- Card 5: Spatial Outlier -->
+              <div onclick="window.app.selectFaultCard('SPATIAL_DISCREPANCY')" id="fault-card-SPATIAL_DISCREPANCY" class="fault-type-card p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl cursor-pointer transition relative hover:border-slate-600 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-slate-200 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>🌐 Spatial Outlier</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-slate-700 bg-transparent flex items-center justify-center text-[10px] text-transparent">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Multi-node spatial divergence against 3 nearest AWS neighbors</p>
+              </div>
+
+              <!-- Card 6: Telemetry Signal Dropout -->
+              <div onclick="window.app.selectFaultCard('DROPOUT')" id="fault-card-DROPOUT" class="fault-type-card p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl cursor-pointer transition relative hover:border-slate-600 group shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="font-bold text-sm text-slate-200 group-hover:text-cyan-300 flex items-center space-x-1.5">
+                    <span>📡 Telemetry Signal Dropout</span>
+                  </div>
+                  <div class="card-radio w-4 h-4 rounded-full border border-slate-700 bg-transparent flex items-center justify-center text-[10px] text-transparent">✓</div>
+                </div>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Total sensor communication loss (null telemetry stream)</p>
+              </div>
+
+            </div>
+
+            <!-- Hidden input maintaining active selected fault type -->
+            <input type="hidden" id="fault-type-select" value="SPIKE">
+
+            <!-- SECTION 3: Target Sensor Channel (Pill Buttons) -->
+            <div class="bg-cardBg border border-cardBorder p-4 rounded-xl space-y-2.5">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">3. Target Sensor Channel</h4>
+              <div class="flex flex-wrap gap-2" id="sensor-pills-container">
+                <button type="button" onclick="window.app.selectSensorPill('temperature_c', this)" class="sensor-pill-btn active px-4 py-2 bg-cyan-950/60 border border-cyan-500 text-cyan-300 rounded-lg text-xs font-semibold transition cursor-pointer shadow-sm">
+                  Temperature
+                </button>
+                <button type="button" onclick="window.app.selectSensorPill('pressure_hpa', this)" class="sensor-pill-btn px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Pressure
+                </button>
+                <button type="button" onclick="window.app.selectSensorPill('humidity_pct', this)" class="sensor-pill-btn px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Humidity
+                </button>
+                <button type="button" onclick="window.app.selectSensorPill('wind_speed_ms', this)" class="sensor-pill-btn px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Wind Speed
+                </button>
+              </div>
+              <input type="hidden" id="fault-sensor-select" value="temperature_c">
+            </div>
+
+            <!-- SECTION 4: Fault Severity Classification (Pill Buttons) -->
+            <div class="bg-cardBg border border-cardBorder p-4 rounded-xl space-y-2.5">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">4. Fault Severity Classification</h4>
+              <div class="flex flex-wrap gap-2" id="severity-pills-container">
+                <button type="button" onclick="window.app.selectSeverityPill('AUTO', this)" class="severity-pill-btn active px-3.5 py-2 bg-cyan-950/60 border border-cyan-500 text-cyan-300 rounded-lg text-xs font-semibold transition cursor-pointer shadow-sm">
+                  Auto
+                </button>
+                <button type="button" onclick="window.app.selectSeverityPill('WARNING', this)" class="severity-pill-btn px-3.5 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Warning
+                </button>
+                <button type="button" onclick="window.app.selectSeverityPill('HIGH', this)" class="severity-pill-btn px-3.5 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  High
+                </button>
+                <button type="button" onclick="window.app.selectSeverityPill('CRITICAL', this)" class="severity-pill-btn px-3.5 py-2 bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Critical
+                </button>
+              </div>
+              <input type="hidden" id="fault-severity-select" value="AUTO">
+            </div>
+
+            <!-- SECTION 5: Sensor Telemetry Configuration (Live Slider & Locked Channels) -->
+            <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-4">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">5. Sensor Telemetry Configuration</h4>
+              
+              <!-- Primary Active Channel Slider -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                  <span id="active-sensor-label" class="text-slate-300 font-semibold">Temperature</span>
+                  <div class="flex items-center space-x-2">
+                    <span id="active-sensor-badge" class="font-mono font-bold text-cyan-400 text-sm">50.5 °C</span>
+                    <input type="number" id="fault-magnitude-input" value="50.5" step="0.5" class="w-20 bg-slate-950 border border-slate-700 py-1 px-2 rounded text-slate-100 font-mono text-center text-xs font-bold">
+                  </div>
+                </div>
+                <input type="range" id="fault-magnitude-slider" min="-20" max="80" step="0.5" value="50.5" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+              </div>
+
+              <!-- Locked Baseline 1: Barometric Pressure -->
+              <div class="space-y-2 pt-2 border-t border-slate-800/80 opacity-60 hover:opacity-100 transition">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 flex items-center space-x-1.5">
+                    <span>🔒</span>
+                    <span>Barometric Pressure (Locked: baseline 1010 hPa)</span>
+                  </span>
+                  <div class="flex items-center space-x-2">
+                    <span class="font-mono text-slate-400 text-xs">1010 hPa</span>
+                    <input type="number" value="1010" disabled class="w-20 bg-slate-950/60 border border-slate-800 py-1 px-2 rounded text-slate-500 font-mono text-center text-xs cursor-not-allowed">
+                  </div>
+                </div>
+                <input type="range" min="950" max="1050" value="1010" disabled class="w-full h-1.5 bg-slate-800/60 rounded-lg appearance-none cursor-not-allowed accent-slate-600">
+              </div>
+
+              <!-- Locked Baseline 2: Relative Humidity -->
+              <div class="space-y-2 pt-2 border-t border-slate-800/80 opacity-60 hover:opacity-100 transition">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 flex items-center space-x-1.5">
+                    <span>🔒</span>
+                    <span>Relative Humidity (Locked: baseline 78%)</span>
+                  </span>
+                  <div class="flex items-center space-x-2">
+                    <span class="font-mono text-slate-400 text-xs">78%</span>
+                    <input type="number" value="78" disabled class="w-20 bg-slate-950/60 border border-slate-800 py-1 px-2 rounded text-slate-500 font-mono text-center text-xs cursor-not-allowed">
+                  </div>
+                </div>
+                <input type="range" min="10" max="100" value="78" disabled class="w-full h-1.5 bg-slate-800/60 rounded-lg appearance-none cursor-not-allowed accent-slate-600">
+              </div>
+            </div>
+
+            <!-- Action Button Bar -->
+            <div class="flex items-center space-x-3 pt-1">
+              <button type="button" onclick="window.app.handleFaultInjection()" class="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/30 transition cursor-pointer flex items-center justify-center space-x-2">
+                <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+                <span>Inject Physical Fault into Stream</span>
+              </button>
+              <button type="button" onclick="window.app.clearAllFaults()" class="px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 cursor-pointer transition flex items-center space-x-1.5" title="Clear all active synthetic faults">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Clear Faults</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: Recent Injections Panel & Benchmark Scenarios -->
+          <div class="lg:col-span-4 space-y-4">
+            
+            <!-- Recent Injections Container -->
+            <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-3 flex flex-col min-h-[300px]">
+              <div class="flex items-center justify-between pb-2 border-b border-cardBorder">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
+                  <i data-lucide="history" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  <span>Recent Injections</span>
+                </h3>
+                <span id="recent-injections-count" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">0 logs</span>
+              </div>
+              
+              <div id="recent-injections-list" class="space-y-2.5 flex-1 overflow-y-auto max-h-[380px] custom-scrollbar">
+                <div class="p-6 text-center text-slate-500 text-xs italic">
+                  No manual faults triggered yet in this session.
+                </div>
+              </div>
+            </div>
+
+            <!-- Pre-Built Benchmark Scenarios -->
+            <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Pre-Built Benchmark Scenarios</h4>
+              <div class="space-y-2.5 text-xs">
+                <div onclick="window.app.triggerBenchmark('SPIKE', 'temperature_c', 22.0, 4)" class="p-3 bg-slate-900 border border-slate-800 rounded-lg hover:border-cyan-500 cursor-pointer transition group">
+                  <div class="font-bold text-roseDanger group-hover:text-rose-300">1. Lightning Voltage Surge (+22°C)</div>
+                  <p class="text-slate-400 mt-0.5 text-[11px]">Injects +22°C transient step surge to test Tier 1 dynamic rate-of-change and WMO exceedance.</p>
+                </div>
+                <div onclick="window.app.triggerBenchmark('SENSOR_DRIFT', 'humidity_pct', 25.0, 6)" class="p-3 bg-slate-900 border border-slate-800 rounded-lg hover:border-cyan-500 cursor-pointer transition group">
+                  <div class="font-bold text-amberWarning group-hover:text-amber-300">2. Capacitive Hygrometer Drift (+25% RH)</div>
+                  <p class="text-slate-400 mt-0.5 text-[11px]">Simulates polymer aging with progressive linear drift and Magnus dew-point contradiction ($T_d > T$).</p>
+                </div>
+                <div onclick="window.app.triggerBenchmark('FROZEN_SENSOR', 'wind_speed_ms', 0.0, 8)" class="p-3 bg-slate-900 border border-slate-800 rounded-lg hover:border-cyan-500 cursor-pointer transition group">
+                  <div class="font-bold text-cyan-400 group-hover:text-cyan-300">3. Anemometer Bearing Stall (0.0 m/s Freeze)</div>
+                  <p class="text-slate-400 mt-0.5 text-[11px]">Locks wind speed telemetry to zero-variance flatline under active thermal gradient.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+
+
+      <!-- ======================================================= -->
+      <!-- TAB 5: AI MODEL HEALTH & XAI                            -->
+      <!-- ======================================================= -->
+      <div id="view-models" class="tab-content space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Feature Importance Card -->
+          <div class="lg:col-span-2 bg-cardBg border border-cardBorder p-5 rounded-xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">XAI Feature Importance Ranking</h4>
+                <p class="text-xs text-slate-400 mt-0.5">Contribution weights across sensor dimensions (Turbo Gradient Scale).</p>
+              </div>
+              <span class="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-mono">Plotly Express</span>
+            </div>
+
+            <div id="plotly-feature-importance-chart" class="w-full h-[280px]"></div>
+
+            <div id="model-feature-importance" class="pt-1 border-t border-slate-800/80">
+              <!-- Dynamically populated list -->
+            </div>
+          </div>
+
+          <!-- Latency Stack Profile -->
+          <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Multi-Tier Defense Latency Stack</h4>
+            <div id="algorithm-stack-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Plotly 3D Feature Space Visualization -->
+        <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h4 class="text-sm font-bold text-white">📊 Plotly 3D Multivariate Feature Space & Anomaly Clustering</h4>
+              <p class="text-xs text-slate-400">Interactive 3D visualization ($\text{Air Temp} \times \text{Relative Humidity} \times \text{Atmospheric Pressure}$) with AI-flagged anomaly clusters.</p>
+            </div>
+            <button onclick="window.app.loadPlotly3dScatter()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow transition">
+              🔄 Refresh 3D Space
+            </button>
+          </div>
+          
+          <div id="plotly-3d-container" class="w-full h-[480px] rounded-lg overflow-hidden border border-slate-800 bg-[#090d16]"></div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 6: PREDICTIVE SENSOR HEALTH & RUL FORECASTING       -->
+      <!-- ======================================================= -->
+      <div id="view-health" class="tab-content space-y-5">
+        <!-- Health Header & Station Selector -->
+        <div class="p-4 bg-cardBg border border-cardBorder rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="heart-pulse" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Predictive Sensor Health & Remaining Useful Life (RUL)</h2>
+              <p class="text-xs text-slate-400">Continuous transducer degradation tracking, calibration drift slope ($R^2$), and proactive maintenance forecasting.</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <label class="text-xs text-slate-400">Station Node:</label>
+            <select id="health-station-select" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-medium">
+              <!-- Dynamically populated -->
+            </select>
+            <button onclick="window.app.loadSensorHealthTab()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer flex items-center space-x-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Refresh Health</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Composite Health Summary Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-cardBorder p-5 rounded-xl flex flex-wrap items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="text-xs font-mono uppercase text-slate-400">Station Composite Health Status</div>
+            <div class="flex items-center space-x-3">
+              <span id="health-composite-score" class="text-3xl font-extrabold text-emerald-400">98.4%</span>
+              <span id="health-composite-badge" class="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                OPTIMAL_HEALTH
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-6 text-xs text-slate-300">
+            <div>
+              <div class="text-slate-400">Degradation Model:</div>
+              <div class="font-mono font-bold text-white">WMO No. 8 Transducer Drift Forecaster</div>
+            </div>
+            <div>
+              <div class="text-slate-400">Assessment History:</div>
+              <div class="font-mono font-bold text-cyan-400">Last 30 Observations (7.5 Hours)</div>
+            </div>
+            <div>
+              <div class="text-slate-400">Active Faults:</div>
+              <div id="health-active-faults" class="font-mono font-bold text-slate-200">0 open faults</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Column Transducer Cards -->
+        <div id="health-sensors-grid" class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Dynamically populated with Pt100, Capacitive Hygrometer, Silicon Barometer cards -->
+        </div>
+
+        <!-- Standard Operating Procedures (SOP) Table -->
+        <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
+            <i data-lucide="clipboard-list" class="w-4 h-4 text-cyan-400"></i>
+            <span>IMD Automated AWS Maintenance Standard Operating Procedures (SOP)</span>
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="text-[11px] uppercase bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3">Transducer Channel</th>
+                  <th class="py-2.5 px-3">Calibration Interval</th>
+                  <th class="py-2.5 px-3">WMO Tolerance Limit</th>
+                  <th class="py-2.5 px-3">Degradation Threshold</th>
+                  <th class="py-2.5 px-3">Action Required Upon Alert</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80 font-mono text-[11px]">
+                <tr>
+                  <td class="py-2.5 px-3 text-slate-200 font-sans font-medium">Pt100/Pt1000 Temperature</td>
+                  <td class="py-2.5 px-3">Every 12 Months</td>
+                  <td class="py-2.5 px-3">&plusmn;0.20 &deg;C</td>
+                  <td class="py-2.5 px-3 text-amberWarning">Drift &ge; &plusmn;0.05 &deg;C/step</td>
+                  <td class="py-2.5 px-3 font-sans">Laboratory liquid ice bath recalibration & four-wire bridge inspection</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3 text-slate-200 font-sans font-medium">Capacitive Thin-Film Hygrometer</td>
+                  <td class="py-2.5 px-3">Every 6 Months</td>
+                  <td class="py-2.5 px-3">&plusmn;2.0 % RH</td>
+                  <td class="py-2.5 px-3 text-amberWarning">Drift &ge; &plusmn;1.5 %/step</td>
+                  <td class="py-2.5 px-3 font-sans">Field saturated salt chamber calibration (11.3% LiCl, 75.3% NaCl)</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3 text-slate-200 font-sans font-medium">Silicon Barometric Transducer</td>
+                  <td class="py-2.5 px-3">Every 24 Months</td>
+                  <td class="py-2.5 px-3">&plusmn;0.30 hPa</td>
+                  <td class="py-2.5 px-3 text-amberWarning">Drift &ge; &plusmn;0.40 hPa/step</td>
+                  <td class="py-2.5 px-3 font-sans">Dual-chamber traveling transfer standard cross-comparison</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 7: PHYSICS-INFORMED SELF-HEALING IMPUTATION STUDIO  -->
+      <!-- ======================================================= -->
+      <div id="view-imputer" class="tab-content space-y-5">
+        <div class="p-4 bg-cardBg border border-cardBorder rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Physics-Informed Self-Healing Data Imputation Studio</h2>
+              <p class="text-xs text-slate-400">Thermodynamic reconstruction of corrupted or anomalous atmospheric telemetry via Clausius-Clapeyron and psychrometric relations.</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="window.app.loadImputerPreset('heat_surge')" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs text-slate-300 font-medium transition cursor-pointer">
+              ⚡ Thermal Surge (55°C)
+            </button>
+            <button onclick="window.app.loadImputerPreset('magnus_inversion')" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs text-slate-300 font-medium transition cursor-pointer">
+              🔄 Magnus Inversion (98% RH)
+            </button>
+            <button onclick="window.app.loadImputerPreset('pressure_drop')" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs text-slate-300 font-medium transition cursor-pointer">
+              📉 Pressure Drop (960 hPa)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Left: Corrupted Input Panel -->
+          <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-cardBorder">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center space-x-2">
+                <i data-lucide="flame" class="w-4 h-4"></i>
+                <span>💥 Corrupted / Faulty Observation Input</span>
+              </h3>
+              <span class="text-[11px] font-mono text-slate-400">Pre-Healing Observation Vector</span>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="text-slate-400 block mb-1">Target Station Node</label>
+                <select id="impute-station-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="text-slate-400 block mb-1">Observed Temp (°C)</label>
+                  <input type="number" id="impute-temp-input" value="48.50" step="0.5" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-mono text-center font-bold">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Observed Pressure (hPa)</label>
+                  <input type="number" id="impute-press-input" value="992.00" step="0.5" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-mono text-center font-bold">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Observed Humidity (%)</label>
+                  <input type="number" id="impute-rh-input" value="98.0" step="1.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 font-mono text-center font-bold">
+                </div>
+              </div>
+
+              <div>
+                <label class="text-slate-400 block mb-1.5">Flagged Channel(s) To Reconstruct</label>
+                <div class="flex flex-wrap gap-2" id="impute-flagged-channels">
+                  <label class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg cursor-pointer hover:border-cyan-500">
+                    <input type="checkbox" value="temperature_c" checked class="rounded accent-cyan-500">
+                    <span class="text-slate-300">Temperature</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg cursor-pointer hover:border-cyan-500">
+                    <input type="checkbox" value="humidity_pct" checked class="rounded accent-cyan-500">
+                    <span class="text-slate-300">Humidity</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg cursor-pointer hover:border-cyan-500">
+                    <input type="checkbox" value="pressure_hpa" class="rounded accent-cyan-500">
+                    <span class="text-slate-300">Pressure</span>
+                  </label>
+                </div>
+              </div>
+
+              <button onclick="window.app.runImputation()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition cursor-pointer flex items-center justify-center space-x-2 mt-2">
+                <i data-lucide="wand-2" class="w-4 h-4"></i>
+                <span>Execute Physics-Informed Reconstruction</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: Self-Healed Output Panel -->
+          <div class="bg-cardBg border border-cardBorder p-5 rounded-xl space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-cardBorder">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-2">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <span>✨ Self-Healed Atmospheric Reconstruction</span>
+              </h3>
+              <span id="impute-status-pill" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                HEALED
+              </span>
+            </div>
+
+            <!-- Imputed Values Grid -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="p-3 bg-slate-900/90 rounded-lg border border-slate-800">
+                <div class="text-[11px] text-slate-400">Imputed Temperature</div>
+                <div id="impute-result-temp" class="text-lg font-bold text-emerald-400 font-mono mt-0.5">26.85 °C</div>
+                <div id="impute-diff-temp" class="text-[10px] text-slate-500">Original: 48.50 °C (-21.65)</div>
+              </div>
+              <div class="p-3 bg-slate-900/90 rounded-lg border border-slate-800">
+                <div class="text-[11px] text-slate-400">Imputed Humidity</div>
+                <div id="impute-result-rh" class="text-lg font-bold text-emerald-400 font-mono mt-0.5">58.40 %</div>
+                <div id="impute-diff-rh" class="text-[10px] text-slate-500">Original: 98.00 % (-39.60)</div>
+              </div>
+              <div class="p-3 bg-slate-900/90 rounded-lg border border-slate-800">
+                <div class="text-[11px] text-slate-400">Imputed Pressure</div>
+                <div id="impute-result-press" class="text-lg font-bold text-emerald-400 font-mono mt-0.5">992.00 hPa</div>
+                <div id="impute-diff-press" class="text-[10px] text-slate-500">Pass-Through (Unchanged)</div>
+              </div>
+            </div>
+
+            <!-- Derived Thermodynamic Constants -->
+            <div class="p-3 bg-cyan-950/30 border border-cyan-800/40 rounded-lg space-y-1.5 text-xs">
+              <div class="font-bold text-cyan-300 flex items-center space-x-1.5">
+                <i data-lucide="thermometer" class="w-3.5 h-3.5"></i>
+                <span>Re-Derived Atmospheric Psychrometrics</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1">
+                <div>Dew Point (T<sub>d</sub>): <span id="impute-result-dew" class="font-mono font-bold text-white">18.20 °C</span></div>
+                <div>Moist Air Density (&rho;<sub>air</sub>): <span id="impute-result-density" class="font-mono font-bold text-white">1.1724 kg/m³</span></div>
+              </div>
+            </div>
+
+            <!-- Uncertainty Breakdown -->
+            <div class="space-y-2 text-xs">
+              <div class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider">Method & Uncertainty Breakdown</div>
+              <div id="impute-method-list" class="space-y-1.5 text-[11px]">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 8: CSV DATASET UPLOAD & BATCH QC                    -->
+      <!-- ======================================================= -->
+      <div id="view-batch" class="tab-content space-y-5">
+        <div class="p-4 bg-cardBg border border-cardBorder rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Batch Quality Control & CSV Dataset Inspector</h2>
+              <p class="text-xs text-slate-400">Upload historical AWS observations containing Temperature, Pressure, and Humidity to detect anomalies and download self-healed datasets.</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="window.app.loadSampleBatch()" class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs text-slate-200 font-medium transition cursor-pointer flex items-center space-x-1.5">
+              <i data-lucide="database" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Load 50-Observation Sample AWS</span>
+            </button>
+            <button id="btn-download-cleaned-csv" onclick="window.app.downloadCleanedCSV()" disabled class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 shadow">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Download Cleaned CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- File Upload Dropzone -->
+        <div class="bg-cardBg border-2 border-dashed border-cardBorder hover:border-cyan-500/80 transition rounded-xl p-6 text-center cursor-pointer" onclick="document.getElementById('batch-file-input').click()">
+          <input type="file" id="batch-file-input" accept=".csv" class="hidden" onchange="window.app.handleCSVFileSelected(event)">
+          <div class="flex flex-col items-center justify-center space-y-2">
+            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-cyan-400">
+              <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+            </div>
+            <div class="text-sm font-semibold text-slate-200">
+              <span id="batch-upload-label">Click to upload AWS CSV Dataset or drag & drop</span>
+            </div>
+            <p class="text-xs text-slate-400">Requires columns: <code class="text-cyan-300">temperature_c</code>, <code class="text-cyan-300">pressure_hpa</code>, <code class="text-cyan-300">humidity_pct</code></p>
+          </div>
+        </div>
+
+        <!-- Metrics Summary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-xs text-slate-400 uppercase font-semibold">Total Observations Evaluated</div>
+            <div id="batch-metric-total" class="text-2xl font-bold text-white font-mono mt-1">0 rows</div>
+          </div>
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-xs text-slate-400 uppercase font-semibold">Anomalies Flagged & Repaired</div>
+            <div id="batch-metric-flagged" class="text-2xl font-bold text-amber-400 font-mono mt-1">0 rows (0.0%)</div>
+          </div>
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-xs text-slate-400 uppercase font-semibold">Clean Data Yield Quality</div>
+            <div id="batch-metric-quality" class="text-2xl font-bold text-emerald-400 font-mono mt-1">100.0%</div>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-cardBg border border-cardBorder rounded-xl overflow-hidden">
+          <div class="p-3 px-4 border-b border-cardBorder flex items-center justify-between text-xs">
+            <span class="font-bold text-slate-200">Batch Inspection & Self-Healing Telemetry Table</span>
+            <span id="batch-table-count" class="font-mono text-slate-400 text-[11px]">0 records loaded</span>
+          </div>
+          <div class="overflow-x-auto max-h-[380px] custom-scrollbar">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="text-[11px] uppercase bg-slate-900/80 text-slate-400 sticky top-0 border-b border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3">#</th>
+                  <th class="py-2.5 px-3">Timestamp</th>
+                  <th class="py-2.5 px-3">Raw Temperature</th>
+                  <th class="py-2.5 px-3">Raw Humidity</th>
+                  <th class="py-2.5 px-3">Raw Pressure</th>
+                  <th class="py-2.5 px-3">QC Status</th>
+                  <th class="py-2.5 px-3">Imputed Value</th>
+                </tr>
+              </thead>
+              <tbody id="batch-results-tbody" class="divide-y divide-slate-800/80 font-mono text-[11px]">
+                <tr>
+                  <td colspan="7" class="py-8 text-center text-slate-500 font-sans text-xs">
+                    No CSV loaded yet. Click "Load 50-Observation Sample AWS" above or upload a CSV file to inspect.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- TAB 9: EDGE AI ESP32 EXPORT & HARDWARE BENCHMARKS       -->
+      <!-- ======================================================= -->
+      <div id="view-edge" class="tab-content space-y-5">
+        <div class="p-4 bg-cardBg border border-cardBorder rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Low-Power Edge AI Deployment on ESP32 Microcontrollers</h2>
+              <p class="text-xs text-slate-400">Direct embedded C/C++ and MicroPython deployment for solar-powered remote weather stations (ESP32-WROOM / ESP32-S3).</p>
+            </div>
+          </div>
+          <button onclick="window.app.runEdgeBenchmark()" id="btn-run-edge-bench" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer flex items-center space-x-1.5">
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>Run Hardware Benchmark</span>
+          </button>
+        </div>
+
+        <!-- 4 Hardware Benchmark KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-[11px] text-slate-400 uppercase font-semibold">RAM Memory Required</div>
+            <div class="text-2xl font-bold text-white font-mono mt-1">&lt; 6 KB</div>
+            <div class="text-[10px] text-emerald-400 mt-0.5">Zero Dynamic Heap (malloc-free)</div>
+          </div>
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-[11px] text-slate-400 uppercase font-semibold">Flash Footprint</div>
+            <div class="text-2xl font-bold text-white font-mono mt-1">&lt; 28 KB</div>
+            <div class="text-[10px] text-cyan-400 mt-0.5">Header-Only C/C++ Architecture</div>
+          </div>
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-[11px] text-slate-400 uppercase font-semibold">Execution Latency</div>
+            <div id="edge-metric-latency" class="text-2xl font-bold text-cyan-300 font-mono mt-1">0.38 ms</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">@ 240 MHz ESP32-S3 Core</div>
+          </div>
+          <div class="bg-cardBg border border-cardBorder p-4 rounded-xl">
+            <div class="text-[11px] text-slate-400 uppercase font-semibold">Energy per Evaluation</div>
+            <div class="text-2xl font-bold text-emerald-400 font-mono mt-1">45.2 µJ</div>
+            <div class="text-[10px] text-emerald-400 mt-0.5">10+ Year Battery Autonomy</div>
+          </div>
+        </div>
+
+        <!-- Live Validation Benchmark Results -->
+        <div id="edge-bench-results-bar" class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="font-bold text-slate-200">Edge ML Benchmark Validation:</span>
+            <span class="text-emerald-400 font-mono font-bold" id="edge-bench-f1">F1-Score: 0.955</span>
+            <span class="text-slate-400">• Precision: <span id="edge-bench-prec" class="text-slate-200 font-mono">0.968</span></span>
+            <span class="text-slate-400">• Recall: <span id="edge-bench-rec" class="text-slate-200 font-mono">0.942</span></span>
+            <span class="text-slate-400">• False Alarm: <span id="edge-bench-fa" class="text-slate-200 font-mono">0.9%</span></span>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[11px] font-mono font-bold">EMBEDDED VERIFIED</span>
+        </div>
+
+        <!-- Code Viewer with Toggle Tabs -->
+        <div class="bg-cardBg border border-cardBorder rounded-xl overflow-hidden flex flex-col">
+          <div class="p-3 px-4 border-b border-cardBorder flex items-center justify-between gap-2 text-xs">
+            <div class="flex space-x-2">
+              <button id="btn-edge-tab-c" onclick="window.app.switchEdgeCodeTab('c')" class="px-3 py-1 rounded-lg font-bold bg-blue-600 text-white cursor-pointer transition">
+                📜 Embedded C/C++ Header (skyguard_esp32.h)
+              </button>
+              <button id="btn-edge-tab-py" onclick="window.app.switchEdgeCodeTab('py')" class="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white cursor-pointer transition">
+                🐍 MicroPython Script (skyguard_edge.py)
+              </button>
+            </div>
+            <button id="btn-download-edge-code" onclick="window.app.downloadEdgeCode()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition flex items-center space-x-1.5">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span id="btn-download-edge-text">Download Header</span>
+            </button>
+          </div>
+
+          <div class="p-4 bg-slate-950 font-mono text-xs text-slate-300 overflow-x-auto max-h-[460px] custom-scrollbar">
+            <pre id="edge-code-pre"><code>Loading embedded C/C++ header...</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-notification" class="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-2xl z-50 text-sm font-semibold border transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none">
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+
