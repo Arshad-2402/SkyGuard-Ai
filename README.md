@@ -139,3 +139,6 @@ python edge_ai/skyguard_edge.py
 
 For deep-dive theoretical derivations, thermodynamic mathematical proofs, and 7 real-world meteorological case studies (Thunderstorm Downbursts, Pre-Monsoon Heatwaves, Coastal Humidity Drifts, Trans-Himalayan Sub-Zero Freezes, and ESP32 Edge Deployment), refer to:
 👉 **[`SKYGUARD_AI_USE_CASES_DOCUMENTATION.md`](SKYGUARD_AI_USE_CASES_DOCUMENTATION.md)**
+## Live Demo
+
+https://skyguard-ai-8oto.onrender.com
